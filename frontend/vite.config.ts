@@ -9,6 +9,19 @@ export default defineConfig({
     // emit into the Python package so `pip install .` ships the UI
     outDir: '../backend/dmarcayn/static',
     emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        // split the two heavyweight vendor trees into their own chunks:
+        // keeps every chunk well under the 500 kB warning threshold and
+        // lets browsers cache vendors across app updates
+        codeSplitting: {
+          groups: [
+            { name: 'recharts', test: /node_modules[\\/](recharts|d3-|victory-vendor|internmap|delaunator|robust-predicates)/ },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+          ],
+        },
+      },
+    },
   },
   server: {
     proxy: {
