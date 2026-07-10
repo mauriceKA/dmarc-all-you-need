@@ -2,6 +2,9 @@
 
 Minimal, beautiful, self-hostable DMARC aggregate report visualizer.
 
+![Dashboard](docs/dashboard-light.png#gh-light-mode-only)
+![Dashboard](docs/dashboard-dark.png#gh-dark-mode-only)
+
 Existing DMARC tooling is either paid SaaS, a limited online service, or a
 sprawling multi-container stack. This project is the opposite: **one Python
 process, one SQLite file, one gorgeous dashboard.**

@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Chart colors are validated (dataviz six-checks) against
+ * both surfaces; semantic meaning is fixed app-wide:
+ *   pass = green, fail = red, quarantine = amber, "none"/info = blue.
+ */
+:root {
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-secondary: #52514e;
+  --ink-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --hairline: rgba(11, 11, 11, 0.1);
+  --wash: rgba(11, 11, 11, 0.045);
+
+  --pass: #0ca30c;
+  --fail: #d03b3b;
+  --quarantine: #c98500;
+  --info: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-secondary: #c3c2b7;
+    --ink-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --hairline: rgba(255, 255, 255, 0.1);
+    --wash: rgba(255, 255, 255, 0.06);
+
+    --info: #3987e5;
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-grid: var(--grid);
+  --color-axis: var(--axis);
+  --color-hairline: var(--hairline);
+  --color-wash: var(--wash);
+  --color-pass: var(--pass);
+  --color-fail: var(--fail);
+  --color-quarantine: var(--quarantine);
+  --color-info: var(--info);
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+html {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* refetch keeps the frame: previous render is held at reduced opacity */
+.reloading {
+  opacity: 0.55;
+  transition: opacity 200ms ease;
+}
+
+/* recharts chrome: recessive hairline grid, no focus outlines on wrappers */
+.recharts-cartesian-grid line {
+  stroke: var(--grid);
+}
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+  outline: none;
+}
