@@ -83,7 +83,21 @@ exactly one of, in this order:
 ## Deployment on a VPS
 
 The app serves plain HTTP without authentication — bind it to `127.0.0.1`
-(the default) and put a reverse proxy with TLS in front. nginx:
+(the default) and put a reverse proxy with TLS in front.
+
+Caddy (automatic TLS):
+
+```caddy
+dmarc.example.com {
+    reverse_proxy 127.0.0.1:8080
+    # optionally require login:
+    # basic_auth {
+    #     admin $2a$14$...   # generate with: caddy hash-password
+    # }
+}
+```
+
+nginx:
 
 ```nginx
 server {
@@ -163,5 +177,16 @@ develop the UI against the live API with hot reload.
 
 ## License
 
-[AGPL-3.0-or-later](LICENSE) — if you run a modified version as a network
-service, you must offer its source to your users.
+Copyright © 2026 Patrik Spieß
+
+Licensed under [AGPL-3.0-or-later](LICENSE) — if you run a modified version
+as a network service, you must offer its source to your users.
+
+If the AGPL's obligations don't fit your use case (e.g. offering this as
+part of a closed-source product or hosted service), a **commercial parallel
+license** is available — contact <post@patrik-spiess.de>.
+
+Note for contributors: to keep dual licensing possible, by submitting a
+contribution you agree that it is licensed to the project under
+AGPL-3.0-or-later **and** that you grant the copyright holder the right to
+distribute it under additional license terms.
