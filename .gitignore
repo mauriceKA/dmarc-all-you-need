@@ -27,6 +27,9 @@ node_modules/
 frontend/dist/
 *.local
 
+# Local tooling state
+.claude/
+
 # Editors / OS
 .idea/
 .vscode/
