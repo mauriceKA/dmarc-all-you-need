@@ -9,7 +9,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-PASSWORD_ENV_VAR = "DMARCAYN_IMAP_PASSWORD"
+PASSWORD_ENV_VAR = "DMARCAYN_IMAP_PASSWORD"  # noqa: S105 -- env var name, not a secret
 
 
 class ConfigError(Exception):

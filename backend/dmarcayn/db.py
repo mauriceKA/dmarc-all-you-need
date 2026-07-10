@@ -250,15 +250,18 @@ class Database:
     def summary(self, domain: str, from_ts: int, to_ts: int) -> dict[str, Any]:
         conn = self.connection()
         row = conn.execute(
-            """SELECT COALESCE(SUM(count), 0)                                    AS total_messages,
-                      COALESCE(SUM(CASE WHEN dmarc_pass = 1 THEN count END), 0)  AS dmarc_pass,
+            """SELECT COALESCE(SUM(count), 0) AS total_messages,
+                      COALESCE(SUM(CASE WHEN dmarc_pass = 1 THEN count END), 0) AS dmarc_pass,
                       COALESCE(SUM(CASE WHEN eval_dkim = 'pass' THEN count END), 0) AS dkim_pass,
-                      COALESCE(SUM(CASE WHEN eval_spf  = 'pass' THEN count END), 0) AS spf_pass,
-                      COALESCE(SUM(CASE WHEN disposition = 'none'       THEN count END), 0) AS disp_none,
-                      COALESCE(SUM(CASE WHEN disposition = 'quarantine' THEN count END), 0) AS disp_quarantine,
-                      COALESCE(SUM(CASE WHEN disposition = 'reject'     THEN count END), 0) AS disp_reject,
-                      COUNT(DISTINCT source_ip)                                  AS distinct_sources,
-                      COUNT(DISTINCT report_id)                                  AS report_count
+                      COALESCE(SUM(CASE WHEN eval_spf = 'pass' THEN count END), 0) AS spf_pass,
+                      COALESCE(SUM(CASE WHEN disposition = 'none' THEN count END), 0)
+                          AS disp_none,
+                      COALESCE(SUM(CASE WHEN disposition = 'quarantine' THEN count END), 0)
+                          AS disp_quarantine,
+                      COALESCE(SUM(CASE WHEN disposition = 'reject' THEN count END), 0)
+                          AS disp_reject,
+                      COUNT(DISTINCT source_ip) AS distinct_sources,
+                      COUNT(DISTINCT report_id) AS report_count
                FROM records
                WHERE domain = ? AND date_begin BETWEEN ? AND ?""",
             (domain, from_ts, to_ts),

@@ -226,7 +226,9 @@ def parse_report_xml(xml_bytes: bytes) -> Report:
     try:
         root = SafeET.fromstring(xml_bytes)
     except DefusedXmlException as exc:
-        raise ReportParseError(f"rejected dangerous XML construct: {exc.__class__.__name__}") from exc
+        raise ReportParseError(
+            f"rejected dangerous XML construct: {exc.__class__.__name__}"
+        ) from exc
     except SafeET.ParseError as exc:
         raise ReportParseError(f"malformed XML: {exc}") from exc
 
