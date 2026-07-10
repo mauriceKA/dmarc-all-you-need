@@ -1,0 +1,51 @@
+; dmarc-all-you-need configuration
+;
+; Copy this file to config.ini and fill in your values:
+;   cp config.ini.template config.ini
+;
+; config.ini is gitignored — never commit it.
+
+[imap]
+host = imap.example.com
+port = 993
+username = dmarc-reports@example.com
+; Provide the IMAP password via EXACTLY ONE of (checked in this order):
+;   1. environment variable DMARCAYN_IMAP_PASSWORD
+;      (systemd EnvironmentFile=, container env)
+;   2. password_cmd  — command whose stdout is the password
+;      (pass, gopass, secret-tool, bw, rbw, ...)
+;   3. password_file — file containing only the password
+;      (systemd LoadCredential=, Docker secrets)
+;   4. password      — plaintext fallback for local quick-start;
+;      if you use it, run: chmod 600 config.ini
+; password_cmd = pass show mail/dmarc
+; password_file = /run/credentials/dmarcayn.service/imap_password
+password = CHANGE_ME
+mailbox = INBOX
+; Delete mails from the mailbox after their report has been imported.
+; When false, processed mails are tracked in the database and skipped on
+; subsequent syncs.
+delete_after_import = false
+
+[sync]
+; How often to check the mailbox for new reports.
+poll_interval_minutes = 30
+
+[server]
+; Bind address. Keep 127.0.0.1 unless you know what you are doing —
+; the app serves plain HTTP without authentication. For remote access,
+; put a reverse proxy with TLS (and auth, if needed) in front.
+host = 127.0.0.1
+port = 8080
+; Where the built frontend lives. Defaults to <repo>/frontend/dist.
+; static_dir = /path/to/frontend/dist
+
+[storage]
+; SQLite database file. The directory is created if missing.
+; Relative paths are resolved against this config file's directory.
+database_path = data/dmarc.sqlite
+
+[limits]
+; Safety caps for report attachments (bytes).
+max_attachment_bytes = 26214400
+max_decompressed_bytes = 104857600
