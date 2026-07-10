@@ -186,7 +186,7 @@ If the AGPL's obligations don't fit your use case (e.g. offering this as
 part of a closed-source product or hosted service), a **commercial parallel
 license** is available — contact <post@patrik-spiess.de>.
 
-Note for contributors: to keep dual licensing possible, by submitting a
-contribution you agree that it is licensed to the project under
-AGPL-3.0-or-later **and** that you grant the copyright holder the right to
-distribute it under additional license terms.
+Note for contributors: to keep dual licensing possible, contributions
+require a sign-off consenting to the license grant described in
+[CONTRIBUTING.md](CONTRIBUTING.md) — in exchange, accepted contributions
+are guaranteed to always remain available under the AGPL.
