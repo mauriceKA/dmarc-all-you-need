@@ -53,6 +53,13 @@ Point `[imap]` at the mailbox that receives your DMARC reports (the `rua=`
 address in your DMARC DNS record). The first sync runs immediately on
 startup.
 
+A **dedicated mailbox** for the `rua=` address is the recommended setup.
+Pointing at a large general-purpose inbox works too: the sync inspects
+MIME metadata (`BODYSTRUCTURE`) in batched round trips and only downloads
+messages that actually carry a report-shaped attachment — but scanning
+tens of thousands of mails still takes a while on the first run. Set
+`[imap] since = YYYY-MM-DD` to skip old mail entirely.
+
 ## Configuration
 
 Every key is documented in [config.ini.template](config.ini.template).
@@ -61,6 +68,7 @@ Highlights:
 | Key | Meaning |
 |---|---|
 | `[imap] delete_after_import` | Delete mails once their report is stored (default `false`; already-imported mails are tracked and never re-read). |
+| `[imap] since` | Optional ISO date; older mails are never scanned. Useful for large mailboxes. |
 | `[sync] poll_interval_minutes` | Mailbox check interval (default 30). |
 | `[server] host` / `port` | Bind address, default `127.0.0.1:8080`. |
 | `[storage] database_path` | SQLite file; relative paths resolve against the config file. |

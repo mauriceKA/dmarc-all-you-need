@@ -101,6 +101,23 @@ def test_password_cmd_failure_hides_output(tmp_path, monkeypatch):
     assert "topsecret" not in str(excinfo.value)
 
 
+def test_since_parsing(tmp_path, monkeypatch):
+    import datetime
+
+    monkeypatch.delenv(PASSWORD_ENV_VAR, raising=False)
+    cfg = load_config(write_config(tmp_path, "password = x\nsince = 2026-01-15"))
+    assert cfg.imap.since == datetime.date(2026, 1, 15)
+    # absent -> None
+    cfg = load_config(write_config(tmp_path, "password = x"))
+    assert cfg.imap.since is None
+
+
+def test_since_invalid(tmp_path, monkeypatch):
+    monkeypatch.delenv(PASSWORD_ENV_VAR, raising=False)
+    with pytest.raises(ConfigError, match="ISO date"):
+        load_config(write_config(tmp_path, "password = x\nsince = 15.01.2026"))
+
+
 def test_invalid_int(tmp_path, monkeypatch):
     monkeypatch.delenv(PASSWORD_ENV_VAR, raising=False)
     path = write_config(tmp_path, "password = x\nport = many")

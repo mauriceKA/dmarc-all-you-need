@@ -11,9 +11,19 @@ import email
 import email.policy
 import imaplib
 import ssl
+from datetime import date
 from email.message import Message
+from typing import Any
 
+from .bodystructure import parse_fetch_response
 from .config import ImapConfig
+
+# UIDs per FETCH (BODYSTRUCTURE) round trip during the metadata scan
+_STRUCTURE_BATCH = 500
+
+# IMAP date format is DD-Mon-YYYY with English month names; strftime('%b')
+# is locale-dependent, so spell them out
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 
 class ImapError(Exception):
@@ -67,13 +77,37 @@ class ImapClient:
     # -- operations -------------------------------------------------------
 
     def list_uids(self) -> list[int]:
-        """UIDs of all messages in the selected mailbox, oldest first."""
-        status, data = self._require_conn().uid("SEARCH", None, "ALL")
+        """UIDs of messages in the selected mailbox, oldest first.
+
+        Honors the optional [imap] since date (server-side SEARCH SINCE).
+        """
+        since = self._config.since
+        criteria = ("ALL",) if since is None else ("SINCE", _imap_date(since))
+        status, data = self._require_conn().uid("SEARCH", None, *criteria)
         if status != "OK":
             raise ImapError(f"UID SEARCH failed: {status}")
         if not data or not data[0]:
             return []
         return [int(uid) for uid in data[0].split()]
+
+    def fetch_structures(self, uids: list[int]) -> dict[int, list[Any]]:
+        """Fetch BODYSTRUCTURE (MIME metadata, no bodies) for many UIDs.
+
+        Batched to a few round trips. UIDs whose response is missing or
+        unparseable are absent from the result — callers must treat them
+        as download candidates (fail open), never as "no report".
+        """
+        conn = self._require_conn()
+        structures: dict[int, list[Any]] = {}
+        for start in range(0, len(uids), _STRUCTURE_BATCH):
+            chunk = uids[start : start + _STRUCTURE_BATCH]
+            status, data = conn.uid(
+                "FETCH", ",".join(str(uid) for uid in chunk), "(BODYSTRUCTURE)"
+            )
+            if status != "OK":
+                continue  # fail open: this chunk gets full downloads
+            structures.update(parse_fetch_response(data))
+        return structures
 
     def fetch_message(self, uid: int) -> Message | None:
         """Fetch one full message; None if it vanished meanwhile."""
@@ -104,3 +138,7 @@ class ImapClient:
     @staticmethod
     def _quote_mailbox(name: str) -> str:
         return '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _imap_date(value: date) -> str:
+    return f"{value.day:02d}-{_MONTHS[value.month - 1]}-{value.year}"

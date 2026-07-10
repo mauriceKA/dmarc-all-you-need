@@ -5,13 +5,18 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from email.message import Message
-from typing import Protocol
+from typing import Any, Protocol
 
+from .bodystructure import has_report_attachment
 from .config import Config
 from .db import Database
 from .report_parser import ReportParseError, find_report_attachments, parse_attachment
 
 logger = logging.getLogger(__name__)
+
+# unprocessed messages are handled in slices: one metadata round trip per
+# slice, and bounded memory even for mailboxes with tens of thousands of mails
+_SCAN_BATCH = 500
 
 
 class MailSource(Protocol):
@@ -20,6 +25,7 @@ class MailSource(Protocol):
     uidvalidity: int
 
     def list_uids(self) -> list[int]: ...
+    def fetch_structures(self, uids: list[int]) -> dict[int, list[Any]]: ...
     def fetch_message(self, uid: int) -> Message | None: ...
     def delete_message(self, uid: int) -> None: ...
     def expunge(self) -> None: ...
@@ -37,29 +43,48 @@ class SyncResult:
 
 def run_sync(client: MailSource, db: Database, config: Config) -> SyncResult:
     """Process every unprocessed mail in the mailbox. Never raises for a
-    single bad message — parse failures are recorded and skipped."""
+    single bad message — parse failures are recorded and skipped.
+
+    Two-phase: a cheap BODYSTRUCTURE scan first classifies messages by
+    their MIME metadata, and only those with a report-shaped attachment
+    (or whose structure could not be determined) are downloaded in full.
+    """
     result = SyncResult()
     delete_after_import = config.imap.delete_after_import
     uidvalidity = client.uidvalidity
     needs_expunge = False
 
-    for uid in client.list_uids():
-        if db.is_message_processed(uidvalidity, uid):
-            continue
-        result.fetched += 1
+    unprocessed = [
+        uid for uid in client.list_uids() if not db.is_message_processed(uidvalidity, uid)
+    ]
 
-        message = client.fetch_message(uid)
-        if message is None:
-            continue  # deleted by another client between SEARCH and FETCH
-        message_id = message.get("Message-ID")
+    for start in range(0, len(unprocessed), _SCAN_BATCH):
+        batch = unprocessed[start : start + _SCAN_BATCH]
+        structures = client.fetch_structures(batch)
 
-        status, detail = _process_message(message, db, config, result)
-        db.mark_message_processed(uidvalidity, uid, message_id, status, detail)
+        for uid in batch:
+            structure = structures.get(uid)
+            if structure is not None and not has_report_attachment(structure):
+                # metadata says no report-shaped attachment: skip the download
+                db.mark_message_processed(
+                    uidvalidity, uid, None, "no_report", "structure scan: no report attachment"
+                )
+                result.skipped += 1
+                continue
 
-        # duplicates are safe to delete too: their content is already stored
-        if delete_after_import and status in ("imported", "duplicate_report"):
-            client.delete_message(uid)
-            needs_expunge = True
+            result.fetched += 1
+            message = client.fetch_message(uid)
+            if message is None:
+                continue  # deleted by another client between SEARCH and FETCH
+            message_id = message.get("Message-ID")
+
+            status, detail = _process_message(message, db, config, result)
+            db.mark_message_processed(uidvalidity, uid, message_id, status, detail)
+
+            # duplicates are safe to delete too: their content is already stored
+            if delete_after_import and status in ("imported", "duplicate_report"):
+                client.delete_message(uid)
+                needs_expunge = True
 
     if needs_expunge:
         client.expunge()

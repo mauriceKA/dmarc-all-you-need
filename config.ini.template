@@ -26,6 +26,10 @@ mailbox = INBOX
 ; When false, processed mails are tracked in the database and skipped on
 ; subsequent syncs.
 delete_after_import = false
+; Ignore mails older than this date (ISO format). Useful when pointing at a
+; large general-purpose mailbox: only mail since this date is even scanned.
+; A dedicated mailbox for your rua= address is still the recommended setup.
+; since = 2026-01-01
 
 [sync]
 ; How often to check the mailbox for new reports.

@@ -7,6 +7,7 @@ import os
 import shlex
 import subprocess
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 
 PASSWORD_ENV_VAR = "DMARCAYN_IMAP_PASSWORD"  # noqa: S105 -- env var name, not a secret
@@ -24,6 +25,7 @@ class ImapConfig:
     password: str = field(repr=False)
     mailbox: str
     delete_after_import: bool
+    since: date | None = None  # ignore mails older than this (SEARCH SINCE)
 
 
 @dataclass(frozen=True)
@@ -166,6 +168,15 @@ def load_config(path: str | Path) -> Config:
         raise ConfigError(
             "[imap] delete_after_import must be a boolean (true/false)"
         ) from None
+    since_raw = imap_sec.get("since", "").strip()
+    since = None
+    if since_raw:
+        try:
+            since = date.fromisoformat(since_raw)
+        except ValueError:
+            raise ConfigError(
+                f"[imap] since must be an ISO date (YYYY-MM-DD), got {since_raw!r}"
+            ) from None
     imap = ImapConfig(
         host=_require(imap_sec, "host"),
         port=_get_int(imap_sec, "port", default=993),
@@ -173,6 +184,7 @@ def load_config(path: str | Path) -> Config:
         password=_resolve_password(imap_sec, config_dir),
         mailbox=imap_sec.get("mailbox", "INBOX").strip() or "INBOX",
         delete_after_import=delete_after_import,
+        since=since,
     )
 
     sync_sec = parser["sync"] if "sync" in parser else parser["DEFAULT"]

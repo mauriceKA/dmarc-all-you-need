@@ -59,16 +59,22 @@ def plain_mail():
 class StubMailbox:
     """In-memory MailSource."""
 
-    def __init__(self, messages):
+    def __init__(self, messages, structures=None):
         self.uidvalidity = 7
         self.messages = dict(messages)  # uid -> Message
+        self.structures = dict(structures or {})  # uid -> parsed bodystructure
         self.deleted = []
+        self.downloaded = []  # uids that got a full fetch
         self.expunged = False
 
     def list_uids(self):
         return sorted(self.messages)
 
+    def fetch_structures(self, uids):
+        return {uid: self.structures[uid] for uid in uids if uid in self.structures}
+
     def fetch_message(self, uid):
+        self.downloaded.append(uid)
         return self.messages.get(uid)
 
     def delete_message(self, uid):
@@ -123,6 +129,31 @@ def test_sync_delete_after_import(db):
     assert sorted(mailbox.deleted) == [1, 2]
     assert mailbox.expunged is True
     assert list(mailbox.messages) == [3]
+
+
+def test_sync_skips_downloads_via_structure_scan(db):
+    # a plain-text mail whose BODYSTRUCTURE shows no report attachment
+    text_structure = ["TEXT", "PLAIN", ["CHARSET", "UTF-8"], None, None, "7BIT", 100, 5]
+    mailbox = StubMailbox(
+        {1: plain_mail(), 2: report_mail()},
+        structures={1: text_structure},
+    )
+    result = run_sync(mailbox, db, make_config())
+    assert mailbox.downloaded == [2]  # the text mail was never fetched in full
+    assert result.skipped == 1
+    assert result.fetched == 1
+    assert result.imported == 1
+    # skipped mail is marked processed and not rescanned next time
+    assert db.is_message_processed(7, 1) is True
+    assert run_sync(mailbox, db, make_config()).fetched == 0
+
+
+def test_sync_fails_open_without_structure(db):
+    # no BODYSTRUCTURE info available -> must download to be safe
+    mailbox = StubMailbox({1: plain_mail()})
+    result = run_sync(mailbox, db, make_config())
+    assert mailbox.downloaded == [1]
+    assert result.skipped == 1  # counted as no_report after the full fetch
 
 
 def test_sync_records_parse_errors_and_continues(db):
