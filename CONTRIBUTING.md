@@ -84,3 +84,9 @@ Signed-off-by: Your Name <your@email.example>
 
 Use your real name and a reachable email address. By signing off you agree
 to both sections above for that contribution.
+
+Pull requests are automatically checked for sign-offs by the
+[DCO bot](https://github.com/apps/dco); a PR cannot be merged until every
+commit in it carries a valid `Signed-off-by` line. Forgot one? Fix it with
+`git commit --amend -s` (or `git rebase --signoff main`) and force-push
+your branch.
