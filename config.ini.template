@@ -37,8 +37,9 @@ poll_interval_minutes = 30
 ; put a reverse proxy with TLS (and auth, if needed) in front.
 host = 127.0.0.1
 port = 8080
-; Where the built frontend lives. Defaults to <repo>/frontend/dist.
-; static_dir = /path/to/frontend/dist
+; Where the built frontend lives. Defaults to the build shipped inside
+; the installed package — only set this to serve a different build.
+; static_dir = /path/to/static
 
 [storage]
 ; SQLite database file. The directory is created if missing.

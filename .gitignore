@@ -25,6 +25,7 @@ build/
 # Node / frontend
 node_modules/
 frontend/dist/
+backend/dmarcayn/static/
 *.local
 
 # Local tooling state

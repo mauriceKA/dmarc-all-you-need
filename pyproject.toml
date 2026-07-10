@@ -32,6 +32,9 @@ Homepage = "https://github.com/mauriceKA/dmarc-all-you-need"
 [tool.setuptools.packages.find]
 where = ["backend"]
 
+[tool.setuptools.package-data]
+dmarcayn = ["static/**/*"]
+
 [tool.ruff]
 line-length = 100
 src = ["backend", "tests"]

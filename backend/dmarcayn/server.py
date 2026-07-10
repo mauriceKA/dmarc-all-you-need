@@ -12,8 +12,10 @@ from .config import Config
 from .db import Database
 from .poller import Poller
 
-# repo layout: backend/dmarcayn/server.py -> <repo>/frontend/dist
-_DEFAULT_STATIC_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+# the frontend build is shipped inside the package (frontend/vite.config.ts
+# emits to backend/dmarcayn/static), so this works for installed wheels,
+# editable installs, and source checkouts alike
+_DEFAULT_STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 _MAX_PAGE_SIZE = 200
 
@@ -112,7 +114,8 @@ def create_app(config: Config, db: Database, poller: Poller | None = None) -> Fa
                 status_code=503,
                 content={
                     "error": "frontend build not found",
-                    "hint": f"run 'npm run build' in frontend/ (looked in {static_dir})",
+                    "hint": "run 'npm run build' in frontend/, then reinstall the package "
+                    f"(pip install .) — looked in {static_dir}",
                 },
             )
 

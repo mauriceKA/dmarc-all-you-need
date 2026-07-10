@@ -31,10 +31,10 @@ Requires Python ≥ 3.11 and (for building the frontend once) Node ≥ 20.
 git clone https://github.com/mauriceKA/dmarc-all-you-need
 cd dmarc-all-you-need
 
-# frontend (build once)
+# frontend (build once — emits into the Python package)
 cd frontend && npm ci && npm run build && cd ..
 
-# backend
+# backend (the install includes the frontend build)
 python -m venv .venv && . .venv/bin/activate
 pip install .
 
