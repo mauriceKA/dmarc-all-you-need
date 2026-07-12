@@ -1,14 +1,115 @@
-import { useEffect } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useApi } from '../api/client'
 import type { ReportDetail as ReportDetailData, ReportRecord } from '../api/types'
 import { fullDate, percent } from '../lib/format'
 import { TooltipFrame } from './ui'
 
+const DISPOSITION_MEANING: Record<string, string> = {
+  none: 'monitor only — failing mail is still delivered normally.',
+  quarantine: 'failing mail should be treated as suspicious (e.g. moved to spam).',
+  reject: 'failing mail should be refused outright.',
+}
+
+/** Plain-word explanations for the published-policy chips (RFC 7489 tags). */
+const POLICY_DOCS: Record<string, { title: string; body: (value: string | number) => string }> = {
+  p: {
+    title: 'Domain policy',
+    body: (value) =>
+      'What receivers should do with mail from this domain that fails DMARC. ' +
+      `"${value}" means: ${DISPOSITION_MEANING[String(value)] ?? 'unknown value.'}`,
+  },
+  sp: {
+    title: 'Subdomain policy',
+    body: (value) =>
+      'Like p, but for mail from subdomains of this domain. ' +
+      `"${value}" means: ${DISPOSITION_MEANING[String(value)] ?? 'unknown value.'} ` +
+      'When absent, subdomains inherit p.',
+  },
+  pct: {
+    title: 'Rollout percentage',
+    body: (value) =>
+      `The policy is applied to ${value}% of failing mail; the remainder gets the ` +
+      'next-milder treatment. Values below 100 are used for gradual policy rollout.',
+  },
+  adkim: {
+    title: 'DKIM alignment mode',
+    body: (value) =>
+      value === 's'
+        ? 'strict: the DKIM signing domain must match the From domain exactly.'
+        : 'relaxed: the DKIM signing domain may be the From domain or any subdomain of it.',
+  },
+  aspf: {
+    title: 'SPF alignment mode',
+    body: (value) =>
+      value === 's'
+        ? 'strict: the SPF-checked domain (MAIL FROM) must match the From domain exactly.'
+        : 'relaxed: the SPF-checked domain (MAIL FROM) may be the From domain or any subdomain of it.',
+  },
+}
+
 function PolicyChip({ label, value }: { label: string; value: string | number | null }) {
+  // hover (mouse only) and pinned (tap / keyboard) are tracked separately:
+  // touch devices fire emulated mouse events before click, so a single
+  // "open" toggled by both would flash and immediately dismiss on tap
+  const [hovered, setHovered] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const tooltipId = useId()
+  const tooltipRef = useRef<HTMLSpanElement>(null)
+  // horizontal correction so the tooltip never leaves the viewport
+  const [shift, setShift] = useState(0)
+  const doc = value === null || value === '' ? undefined : POLICY_DOCS[label]
+  const open = (hovered || pinned) && doc !== undefined
+
+  useLayoutEffect(() => {
+    if (!open || !tooltipRef.current) {
+      setShift(0)
+      return
+    }
+    const margin = 8
+    const rect = tooltipRef.current.getBoundingClientRect()
+    const viewportWidth = document.documentElement.clientWidth
+    let delta = 0
+    if (rect.right > viewportWidth - margin) delta = viewportWidth - margin - rect.right
+    if (rect.left + delta < margin) delta = margin - rect.left
+    setShift(delta)
+  }, [open])
+
   if (value === null || value === '') return null
   return (
-    <span className="rounded-lg bg-wash px-2 py-1 text-xs text-ink-secondary">
-      {label}=<span className="font-medium text-ink">{value}</span>
+    <span className="relative inline-block">
+      <button
+        type="button"
+        className="rounded-lg bg-wash px-2 py-1 text-xs text-ink-secondary
+                   outline-none focus-visible:ring-2 focus-visible:ring-info/50"
+        aria-describedby={open ? tooltipId : undefined}
+        onPointerEnter={(event) => event.pointerType === 'mouse' && setHovered(true)}
+        onPointerLeave={(event) => event.pointerType === 'mouse' && setHovered(false)}
+        onClick={(event) => {
+          // tap (or Enter) toggles; plain mouse clicks are covered by hover
+          if ((event.nativeEvent as PointerEvent).pointerType !== 'mouse') {
+            setPinned((wasPinned) => !wasPinned)
+          }
+        }}
+        onFocus={(event) => event.currentTarget.matches(':focus-visible') && setPinned(true)}
+        onBlur={() => setPinned(false)}
+        onKeyDown={(event) => event.key === 'Escape' && setPinned(false)}
+      >
+        {label}=<span className="font-medium text-ink">{value}</span>
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          id={tooltipId}
+          ref={tooltipRef}
+          style={{ transform: `translateX(${shift}px)` }}
+          className="absolute left-0 top-full z-10 mt-1.5 block w-max max-w-56 rounded-lg
+                     border border-hairline bg-surface p-2.5 text-left text-xs
+                     text-ink-secondary shadow-md"
+        >
+          <span className="mb-0.5 block font-medium text-ink">{doc.title}</span>
+          {doc.body(value)}
+        </span>
+      )}
     </span>
   )
 }
@@ -95,6 +196,7 @@ export function ReportDetail({ reportId, onClose }: { reportId: number; onClose:
   const messageTotal = data?.records.reduce((sum, record) => sum + record.count, 0) ?? 0
   const passTotal =
     data?.records.reduce((sum, record) => sum + (record.dmarc_pass ? record.count : 0), 0) ?? 0
+  const sourceTotal = new Set(data?.records.map((record) => record.source_ip)).size
 
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Report detail">
@@ -152,8 +254,9 @@ export function ReportDetail({ reportId, onClose }: { reportId: number; onClose:
                 {messageTotal.toLocaleString('en-US')}
               </span>{' '}
               messages, <span className="font-medium text-pass">{percent(passTotal, messageTotal)}</span>{' '}
-              passing DMARC, from {data.records.length} source
-              {data.records.length === 1 ? '' : 's'}
+              passing DMARC — {data.records.length} record
+              {data.records.length === 1 ? '' : 's'} from {sourceTotal} source
+              {sourceTotal === 1 ? '' : 's'}
               {data.org_email ? (
                 <>
                   {' '}
