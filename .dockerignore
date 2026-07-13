@@ -1,0 +1,33 @@
+# secrets & local state — must never enter an image
+config.ini
+.env
+.env.*
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.db
+
+# built in-stage / not needed in the context
+backend/dmarcayn/static/
+frontend/dist/
+frontend/node_modules/
+node_modules/
+
+# development clutter
+.git/
+.github/
+.claude/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+tests/
+docs/
+Dockerfile
+docker-compose.yml
+.dockerignore

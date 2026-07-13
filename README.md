@@ -179,6 +179,35 @@ Apache (needs `a2enmod proxy proxy_http ssl`):
 </VirtualHost>
 ```
 
+### Docker
+
+Prefer containers? A [Dockerfile](Dockerfile) and [docker-compose.yml](docker-compose.yml)
+are included — still just one small container (the frontend is baked into
+the image at build time; the SQLite file lives in a named volume).
+
+```sh
+cp config.ini.template config.ini
+$EDITOR config.ini      # for the container, set:
+                        #   [server]  host = 0.0.0.0
+                        #   [storage] database_path = /data/dmarc.sqlite
+echo 'DMARCAYN_IMAP_PASSWORD=your-imap-password' > .env
+docker compose up -d
+```
+
+Notes:
+
+- `host = 0.0.0.0` applies **inside** the container; the compose file
+  publishes the port as `127.0.0.1:8080` on the host, so nothing is
+  exposed until you put a reverse proxy in front.
+- The IMAP password comes from `.env` (gitignored) via the
+  `DMARCAYN_IMAP_PASSWORD` environment variable — leave the `password`
+  keys in `config.ini` unset.
+- The container runs as a non-root user and includes a healthcheck.
+- Prebuilt multi-arch images (amd64/arm64) are published to
+  `ghcr.io/mauriceka/dmarc-all-you-need` on every release — swap
+  `build: .` for the commented `image:` line in `docker-compose.yml`
+  to use them instead of building locally.
+
 ## Development
 
 ```sh

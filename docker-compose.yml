@@ -1,0 +1,15 @@
+services:
+  dmarcayn:
+    build: .
+    # image: ghcr.io/mauriceka/dmarc-all-you-need:latest   # once published
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080" # host-local; put a reverse proxy in front
+    volumes:
+      - ./config.ini:/config/config.ini:ro
+      - dmarc-data:/data
+    environment:
+      DMARCAYN_IMAP_PASSWORD: ${DMARCAYN_IMAP_PASSWORD:?set it in .env}
+
+volumes:
+  dmarc-data:
