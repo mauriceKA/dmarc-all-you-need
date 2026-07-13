@@ -90,35 +90,7 @@ exactly one of, in this order:
 
 ## Deployment on a VPS
 
-The app serves plain HTTP without authentication — bind it to `127.0.0.1`
-(the default) and put a reverse proxy with TLS in front.
-
-Caddy (automatic TLS):
-
-```caddy
-dmarc.example.com {
-    reverse_proxy 127.0.0.1:8080
-    # optionally require login:
-    # basic_auth {
-    #     admin $2a$14$...   # generate with: caddy hash-password
-    # }
-}
-```
-
-nginx:
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name dmarc.example.com;
-    # ssl_certificate ...; ssl_certificate_key ...;
-    # optionally: auth_basic "dmarc"; auth_basic_user_file /etc/nginx/htpasswd;
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-    }
-}
-```
+### Setting up a service
 
 systemd unit with the password kept out of the config file
 (`/etc/systemd/system/dmarcayn.service`):
@@ -150,6 +122,62 @@ WantedBy=multi-user.target
 with `password_file = /run/credentials/dmarcayn.service/imap_password` in
 the `[imap]` section and `database_path = /var/lib/dmarcayn/dmarc.sqlite`
 under `[storage]`.
+
+### Reverse Proxying
+
+To access the UI hosted on your VPS from remote, you can either use a virtual networks service like Tailscale, forward the port via ssh or to expose the UI to the internet via a reverse proxy, as described in this section. 
+
+The app serves plain HTTP without authentication — bind it to `127.0.0.1`
+(the default) and put a reverse proxy with TLS in front.
+
+Caddy (automatic TLS):
+
+```caddy
+dmarc.example.com {
+    reverse_proxy 127.0.0.1:8080
+    # optionally require login:
+    # basic_auth {
+    #     admin $2a$14$...   # generate with: caddy hash-password
+    # }
+}
+```
+
+nginx:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name dmarc.example.com;
+    # ssl_certificate ...; ssl_certificate_key ...;
+    # optionally: auth_basic "dmarc"; auth_basic_user_file /etc/nginx/htpasswd;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+    }
+}
+```
+
+Apache (needs `a2enmod proxy proxy_http ssl`):
+
+```apache
+<VirtualHost *:443>
+    ServerName dmarc.example.com
+    SSLEngine on
+    # SSLCertificateFile ...; SSLCertificateKeyFile ...;
+
+    ProxyPreserveHost On
+    ProxyPass        / http://127.0.0.1:8080/
+    ProxyPassReverse / http://127.0.0.1:8080/
+
+    # optionally require login:
+    # <Location />
+    #     AuthType Basic
+    #     AuthName "dmarc"
+    #     AuthUserFile /etc/apache2/htpasswd
+    #     Require valid-user
+    # </Location>
+</VirtualHost>
+```
 
 ## Development
 
