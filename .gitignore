@@ -36,3 +36,4 @@ backend/dmarcayn/static/
 .vscode/
 *.swp
 .DS_Store
+README_local.md

@@ -240,6 +240,12 @@ develop the UI against the live API with hot reload.
 - **Dependency budget** (enforced in review): 3 Python runtime packages,
   frontend lockfile committed. PRs adding dependencies need a strong case.
 
+# Related projects
+
+* https://github.com/Paul1404/Sigil - very similar, maybe larger footprint. Only offers docker deployment. More features.
+
+* https://github.com/adminsyspro/dmarcontrol - similar, but this one does not log into your mailbox and requires you to put the DMARC reports into a folder. Also DMARC-AYN has a minimal footprint and can be deployed natively without docker.
+
 ## License
 
 Copyright © 2026 Patrik Spieß
